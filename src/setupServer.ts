@@ -1,10 +1,10 @@
-import { CustomError, IErrorResponse } from './shared/globals/helpers/error-handler';
+
 import {Application, json, urlencoded , NextFunction , Request , Response } from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import hpp from 'hpp';
-import cookieSession from 'cookie-session';
+//import cookieParser from 'cookieParser';
 import HTTP_STATUS from 'http-status-codes';
 import 'express-async-errors';
 import { Server } from 'socket.io';
@@ -14,7 +14,10 @@ import { createClient } from 'redis';
 import compression from 'compression';
 import { config } from './config';
 import applicationRoutes from './routes';
+import { CustomError, IErrorResponse } from './shared/globals/helpers/error-handler';
+import cookieSession  from 'cookie-session';
 
+const cookieParser = require('cookie-parser');
 
 const SERVER_PORT = 5000;
 const log : Logger = config.createLogger('server');
@@ -35,29 +38,34 @@ export class ChattyServer{
         //this.printMessage(this.app)
     }
 
-    private securityMiddleware(app: Application): void{
-        app.use(
-            cookieSession({
-                name:'session',
-                keys:[config.SECRET_KEY_ONE!, config.SECRET_KEY_TWO!],
-                maxAge: 24* 7 * 3600000,
-                secure: config.NODE_ENV !== 'DEV'
-            })
-        );
-        app.use(hpp());
-        app.use(helmet());
-        app.use(
-            cors({
-                origin: '*',
-                credentials: true,
-                optionsSuccessStatus:200,
-                methods: ['GET', 'POST', 'PUT',"DELETE", "OPTIONS"]
-            })
-        );
-    }
+		private securityMiddleware(app: Application): void {
+			console.log('Executing securityMiddleware');
+			app.use(hpp());
+			app.use(helmet());
+			app.use(
+					cors({
+							origin: config.CLIENT_URL,
+							credentials: true,
+							optionsSuccessStatus: 200,
+							methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+					})
+			);
+			const cookieParser = require('cookie-parser');
+			console.log('session started');
+			app.use(cookieParser());
+			app.use(
+					cookieSession({
+							name: 'session',
+							keys: [config.SECRET_KEY_ONE!, config.SECRET_KEY_TWO!],
+							maxAge: 24 * 7 * 3600000,
+							secure: config.NODE_ENV !== 'dev'
+					})
+			);
+	}
+
 
     private standardMiddleware(app: Application): void{
-        app.use(compression);
+        app.use(compression());
         app.use(json({limit: '50mb'}));
         app.use(urlencoded({extended: true , limit:'50mb'}))
     }
